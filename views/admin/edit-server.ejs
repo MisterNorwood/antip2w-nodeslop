@@ -1,0 +1,192 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link active">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>Edit Server</h1>
+      <a href="/admin/servers" class="btn btn-ghost">← Back</a>
+    </div>
+
+    ${errors && errors.length ? `
+      <div class="alert alert-error">
+        <strong>Errors:</strong>
+        <ul>${errors.map(e => `<li>${escHtml(e)}</li>`).join('')}</ul>
+      </div>
+    ` : ''}
+
+    ${server.last_edit_reason ? `
+      <div class="alert alert-info">
+        <strong>Last edit reason:</strong> ${escHtml(server.last_edit_reason)}
+      </div>
+    ` : ''}
+
+    <form action="/admin/servers/${server.id}/edit" method="POST" enctype="multipart/form-data" class="form-card">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+      <div class="form-group">
+        <label for="name">Server Name <span class="required">*</span></label>
+        <input type="text" id="name" name="name" class="form-input" value="${escHtml(server.name)}" required maxlength="80">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ip">IP / Hostname <span class="required">*</span></label>
+          <input type="text" id="ip" name="ip" class="form-input" value="${escHtml(server.ip)}" required>
+        </div>
+        <div class="form-group form-group-sm">
+          <label for="port">Port</label>
+          <input type="number" id="port" name="port" class="form-input" value="${server.port || 25565}" min="1" max="65535">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="version">Version</label>
+          <input type="text" id="version" name="version" class="form-input" value="${escHtml(server.version || '')}" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label for="website_url">Website URL</label>
+          <input type="url" id="website_url" name="website_url" class="form-input" value="${escHtml(server.website_url || '')}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="tags">Tags <span class="hint">(comma separated)</span></label>
+        <input type="text" id="tags" name="tags" class="form-input" value="${escHtml(server.tags || '')}" maxlength="200">
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" class="form-textarea" rows="6" maxlength="2000">${escHtml(server.description || '')}</textarea>
+        <span class="char-count" id="desc-count">${(server.description || '').length} / 2000</span>
+      </div>
+
+      <div class="form-group">
+        <label>Banner Image</label>
+        ${server.banner_filename ? `
+          <div class="current-banner">
+            <img src="/uploads/${escHtml(server.banner_filename)}" alt="Current banner" class="current-banner-img">
+            <label class="checkbox-label">
+              <input type="checkbox" name="remove_banner" value="1" id="remove_banner">
+              Remove current banner
+            </label>
+          </div>
+        ` : ''}
+        <div class="file-upload-area" id="upload-area">
+          <input type="file" id="banner" name="banner" accept=".gif,.png,.jpg,.jpeg,.webp" class="file-input" data-preview>
+          <div class="upload-placeholder" id="upload-placeholder">
+            <span class="upload-icon">🖼️</span>
+            <span>${server.banner_filename ? 'Upload a new banner to replace current' : 'Click to upload a banner (GIF supported)'}</span>
+          </div>
+          <img id="banner-preview" class="banner-preview hidden" alt="New banner preview">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="edit_reason">Edit Reason <span class="hint">(shown in logs and notifies server owner)</span></label>
+        <input type="text" id="edit_reason" name="edit_reason" class="form-input" placeholder="e.g. Updated description, fixed IP..." maxlength="500">
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
+        <a href="/admin/servers" class="btn btn-ghost">Cancel</a>
+        <a href="/servers/${server.id}" target="_blank" class="btn btn-outline">View Live</a>
+      </div>
+    </form>
+
+    <div class="danger-zone">
+      <h3 class="danger-zone-title">⚠️ Danger Zone</h3>
+      <p>Permanently delete this server listing. The owner will be notified with your reason.</p>
+      <div class="danger-zone-form">
+        <input type="text" id="delete-reason-input" class="form-input" placeholder="Deletion reason (strongly recommended)..." maxlength="500">
+        <button class="btn btn-danger" id="confirm-delete-btn">🗑️ Delete Server</button>
+      </div>
+      <form id="delete-form" action="/admin/servers/${server.id}/delete" method="POST" class="delete-form">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+        <input type="hidden" name="reason" id="delete-reason-hidden">
+      </form>
+    </div>
+  </div>
+</div>
+
+<script nonce="${cspNonce}">
+document.getElementById('description').addEventListener('input', function() {
+  document.getElementById('desc-count').textContent = this.value.length + ' / 2000';
+});
+function previewBanner(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const preview = document.getElementById('banner-preview');
+      const placeholder = document.getElementById('upload-placeholder');
+      preview.src = e.target.result;
+      preview.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+const area = document.getElementById('upload-area');
+area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
+area.addEventListener('dragleave', () => area.classList.remove('drag-over'));
+area.addEventListener('drop', e => {
+  e.preventDefault();
+  area.classList.remove('drag-over');
+  const input = document.getElementById('banner');
+  input.files = e.dataTransfer.files;
+  previewBanner(input);
+});
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('confirm-delete-btn');
+  if (btn) btn.addEventListener('click', confirmDelete);
+
+  // Multipart edit form: send X-CSRF-Token header since csurf bypasses multipart body
+  const editForm = document.querySelector('form[enctype="multipart/form-data"]');
+  if (editForm) {
+    editForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var token = getCsrfToken();
+      var data = new FormData(editForm);
+      fetch(editForm.action, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': token },
+        body: data,
+        credentials: 'same-origin'
+      }).then(function(res) {
+        if (res.redirected) { window.location.href = res.url; return; }
+        return res.text().then(function(html) { document.open(); document.write(html); document.close(); });
+      });
+    });
+  }
+});
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+function confirmDelete() {
+  const reason = document.getElementById('delete-reason-input').value.trim();
+  const serverName = ${JSON.stringify(server.name)};
+  if (!confirm('Delete "' + serverName + '"? This cannot be undone.' + (reason ? '\nReason: ' + reason : ''))) return;
+  document.getElementById('delete-reason-hidden').value = reason;
+  document.getElementById('delete-form').submit();
+}
+</script>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

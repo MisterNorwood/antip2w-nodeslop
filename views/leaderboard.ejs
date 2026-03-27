@@ -1,0 +1,53 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function medal(i) {
+  return ['🥇','🥈','🥉'][i] || (i + 1) + '.';
+}
+
+const bodyHtml = `
+<div class="leaderboard-page">
+  <div class="leaderboard-header">
+    <h1 class="page-title">🏆 Leaderboard</h1>
+    <p class="page-sub">Top contributors to the AntiP2W directory</p>
+  </div>
+
+  <div class="leaderboard-grid">
+
+    <div class="lb-card">
+      <h2 class="lb-card-title">📋 Most Servers Listed</h2>
+      <p class="lb-card-sub">By number of approved server listings</p>
+      ${topSubmitters.length === 0 ? '<p class="muted lb-empty">No data yet</p>' : `
+      <ol class="lb-list">
+        ${topSubmitters.map((u, i) => `
+          <li class="lb-entry">
+            <span class="lb-rank">${medal(i)}</span>
+            <span class="lb-name">${escHtml(u.submitted_by_username || u.submitted_by_discord_id)}</span>
+            <span class="lb-score">${u.server_count} server${u.server_count !== 1 ? 's' : ''}</span>
+          </li>
+        `).join('')}
+      </ol>`}
+    </div>
+
+    <div class="lb-card">
+      <h2 class="lb-card-title">⭐ Most Community Likes</h2>
+      <p class="lb-card-sub">By total upvote score across all their servers</p>
+      ${topRated.length === 0 ? '<p class="muted lb-empty">No votes yet</p>' : `
+      <ol class="lb-list">
+        ${topRated.map((u, i) => `
+          <li class="lb-entry">
+            <span class="lb-rank">${medal(i)}</span>
+            <span class="lb-name">${escHtml(u.submitted_by_username || u.submitted_by_discord_id)}</span>
+            <span class="lb-score lb-score-positive">+${u.total_score} (${u.server_count} server${u.server_count !== 1 ? 's' : ''})</span>
+          </li>
+        `).join('')}
+      </ol>`}
+    </div>
+
+  </div>
+</div>
+`;
+%>
+<%- include('layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

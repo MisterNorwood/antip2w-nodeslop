@@ -1,0 +1,114 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const updatePendingError = locals.errorMsg === 'update_pending';
+const bodyHtml = `
+<div class="form-page" style="max-width:860px">
+  <h1 class="page-title">My Submissions</h1>
+
+  ${updatePendingError ? '<div class="alert alert-error">⚠️ You already have a pending update for this server. Wait for it to be reviewed before submitting another.</div>' : ''}
+
+  ${notifications && notifications.length ? `
+    <div class="notif-section">
+      <div class="notif-section-header">
+        <h2 class="notif-title">📬 Notifications</h2>
+        <form action="/servers/notifications/dismiss-all" method="POST" class="inline-form">
+          <button type="submit" class="btn btn-xs btn-ghost">Dismiss all</button>
+        </form>
+      </div>
+      ${notifications.map(n => `
+        <div class="notif-item ${n.read ? 'notif-read' : 'notif-unread'}">
+          <span class="notif-msg">${escHtml(n.message)}</span>
+          <div class="notif-right">
+            <span class="notif-time muted">${new Date(n.created_at).toLocaleString()}</span>
+            <form action="/servers/notifications/${n.id}/dismiss" method="POST" class="inline-form">
+              <button type="submit" class="notif-dismiss" title="Dismiss">✕</button>
+            </form>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  ` : ''}
+
+  ${myServers && myServers.length ? `
+    <div class="my-section">
+      <h2 class="my-section-title">🌐 My Live Servers</h2>
+      <div class="requests-list">
+        ${myServers.map(s => {
+          const hasPendingUpdate = pendingUpdateIds && pendingUpdateIds.has(s.id);
+          return `
+          <div class="request-card status-border-approved">
+            <div class="request-card-header">
+              <div>
+                <h3 class="request-name">${escHtml(s.name)}</h3>
+                <p class="request-ip"><code>${escHtml(s.ip)}${s.port !== 25565 ? ':' + s.port : ''}</code></p>
+              </div>
+              <span class="status-badge status-approved">live</span>
+            </div>
+            <p class="request-meta muted">Approved ${new Date(s.created_at).toLocaleDateString()}</p>
+            ${hasPendingUpdate ? '<p class="update-pending-note">🔄 Update pending review</p>' : ''}
+            <div class="request-actions">
+              <a href="/servers/${s.id}" class="btn btn-xs btn-ghost" target="_blank">View</a>
+              ${!hasPendingUpdate ? `<a href="/servers/my-servers/${s.id}/update" class="btn btn-xs btn-outline">🔄 Submit Update</a>` : ''}
+              <form action="/servers/my-servers/${s.id}/delete" method="POST" class="inline-form"
+                    data-confirm="Remove your server from the listing? This cannot be undone.">
+                <button type="submit" class="btn btn-xs btn-danger">🗑️ Remove Listing</button>
+              </form>
+            </div>
+          </div>
+        `}).join('')}
+      </div>
+    </div>
+  ` : ''}
+
+  <div class="my-section">
+    <h2 class="my-section-title">📬 Submission History</h2>
+    ${requests.length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h2>No submissions yet</h2>
+        <p>Submit your first server to get it listed!</p>
+        <a href="/servers/submit/new" class="btn btn-primary">Submit a Server</a>
+      </div>
+    ` : `
+      <div class="requests-list">
+        ${requests.map(r => {
+          const ds = r.displayStatus || r.status;
+          return `
+          <div class="request-card status-border-${escHtml(ds)}">
+            <div class="request-card-header">
+              <div>
+                <h3 class="request-name">
+                  ${escHtml(r.name)}
+                  ${r.update_of_server_id ? '<span class="tag" style="font-size:11px">🔄 Update</span>' : ''}
+                </h3>
+                <p class="request-ip"><code>${escHtml(r.ip)}${r.port !== 25565 ? ':' + r.port : ''}</code></p>
+              </div>
+              <span class="status-badge status-${escHtml(ds)}">${escHtml(ds)}</span>
+            </div>
+            ${r.review_note ? `<p class="request-note"><strong>Admin note:</strong> ${escHtml(r.review_note)}</p>` : ''}
+            <p class="request-meta muted">Submitted ${new Date(r.created_at).toLocaleDateString()}</p>
+            ${r.status === 'pending' ? `
+              <div class="request-actions">
+                <a href="/servers/requests/${r.id}/edit" class="btn btn-xs btn-outline">✏️ Edit</a>
+                <form action="/servers/requests/${r.id}/delete" method="POST" class="inline-form"
+                      data-confirm="Cancel this submission?">
+                  <button type="submit" class="btn btn-xs btn-danger">🗑️ Cancel</button>
+                </form>
+              </div>
+            ` : ''}
+          </div>
+        `}).join('')}
+      </div>
+    `}
+  </div>
+
+  <div style="margin-top:24px">
+    <a href="/servers/submit/new" class="btn btn-primary">+ Submit a Server</a>
+    <a href="/servers" class="btn btn-ghost">Browse Servers</a>
+  </div>
+</div>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

@@ -1,0 +1,255 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function playerStatus(server) {
+  if (server.online) {
+    return `<span class="status-pill online">🟢 Online &nbsp;·&nbsp; ${server.player_count} / ${server.max_player_count} players</span>`;
+  }
+  const cached = server.max_player_count > 0 ? ` &nbsp;·&nbsp; 0/${server.max_player_count} (cached)` : '';
+  return `<span class="status-pill offline">🔴 Offline${cached}</span>`;
+}
+
+const serverIp  = escHtml(server.ip) + (server.port !== 25565 ? ':' + server.port : '');
+const safeWebsite = /^https?:\/\//i.test(server.website_url || '') ? escHtml(server.website_url) : '';
+const score = voteData ? voteData.score : 0;
+
+const bodyHtml = `
+<div class="server-detail">
+  <div class="server-detail-header">
+    <div>
+      <h1 class="server-detail-name">${escHtml(server.name)}</h1>
+      ${server.submitted_by_username ? `<p class="server-submitter">Submitted by <strong>${escHtml(server.submitted_by_username)}</strong></p>` : ''}
+      <div class="server-detail-status" id="status-wrap">
+        ${playerStatus(server)}
+        ${user ? `<button class="btn btn-xs btn-ghost ping-btn" id="ping-btn" data-ping-id="${server.id}">↻ Refresh</button>` : ''}
+      </div>
+      <p class="server-detail-ip">
+        <span class="ip-label">IP:</span>
+        <code class="ip-code" id="server-ip">${serverIp}</code>
+        <button class="btn btn-xs btn-ghost copy-btn" data-copy-ip>Copy</button>
+      </p>
+    </div>
+    <div class="server-detail-actions">
+      ${safeWebsite ? `<a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" class="btn btn-outline">🌐 Visit Website</a>` : ''}
+      ${isAdmin ? `<a href="/admin/servers/${server.id}/edit" class="btn btn-admin">✏️ Edit</a>` : ''}
+    </div>
+  </div>
+
+  ${server.banner_filename ? `
+    <div class="server-detail-banner">
+      <img src="/uploads/${escHtml(server.banner_filename)}" alt="${escHtml(server.name)} banner" class="detail-banner-img">
+    </div>
+  ` : ''}
+
+  <div class="server-detail-body">
+    <div class="server-detail-main">
+      <div class="detail-card">
+        <h2 class="detail-card-title">About This Server</h2>
+        <p class="server-detail-desc">${server.description ? escHtml(server.description).replace(/\n/g, '<br>') : '<em>No description provided.</em>'}</p>
+      </div>
+      <div class="detail-tags">
+        ${server.version ? `<span class="tag tag-version">${escHtml(server.version)}</span>` : ''}
+        ${server.tagList.map(t => `<a href="/servers?tag=${encodeURIComponent(t)}" class="tag">${escHtml(t)}</a>`).join('')}
+      </div>
+
+      <!-- Vote Widget -->
+      <div class="vote-widget" id="vote-widget">
+        <div class="vote-bar">
+          <button class="vote-btn upvote-btn ${userVote === 1 ? 'active' : ''}"
+            id="upvote-btn"
+            ${user ? `data-vote="1" data-server-id="${server.id}"` : 'data-vote-login'}
+            title="${user ? 'Upvote' : 'Login to vote'}">
+            👍
+          </button>
+          <span class="vote-score ${score > 0 ? 'score-positive' : score < 0 ? 'score-negative' : ''}" id="vote-score">${score}</span>
+          <button class="vote-btn downvote-btn ${userVote === -1 ? 'active' : ''}"
+            id="downvote-btn"
+            ${user ? `data-vote="-1" data-server-id="${server.id}"` : 'data-vote-login'}
+            title="${user ? 'Downvote' : 'Login to vote'}">
+            👎
+          </button>
+        </div>
+        ${!user ? '<p class="vote-login-hint"><a href="/auth/discord">Login</a> to vote</p>' : ''}
+        <div id="vote-msg" class="vote-msg hidden"></div>
+      </div>
+    </div>
+
+    <aside class="server-detail-sidebar">
+      <div class="detail-card">
+        <h3 class="detail-card-title">Quick Connect</h3>
+        <code class="connect-ip" id="server-ip-full">${serverIp}</code>
+        <button class="btn btn-primary btn-block" data-copy-ip>📋 Copy IP Address</button>
+        <div id="copy-success" class="copy-success hidden">✅ Copied!</div>
+      </div>
+
+      <div class="detail-card">
+        <h3 class="detail-card-title">Server Info</h3>
+        <dl class="info-list">
+          <dt>Address</dt>
+          <dd><code>${serverIp}</code></dd>
+          ${server.version ? `<dt>Version</dt><dd>${escHtml(server.version)}</dd>` : ''}
+          ${safeWebsite ? `<dt>Website</dt><dd><a href="${safeWebsite}" target="_blank" rel="noopener noreferrer" class="detail-link">${escHtml(server.website_url)}</a></dd>` : ''}
+          <dt>Added</dt>
+          <dd>${new Date(server.created_at).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}</dd>
+          ${server.submitted_by_username ? `<dt>Submitted by</dt><dd>${escHtml(server.submitted_by_username)}</dd>` : ''}
+          ${server.last_checked ? `<dt>Last checked</dt><dd>${new Date(server.last_checked).toLocaleString()}</dd>` : ''}
+          <dt>Rating</dt>
+          <dd><span class="${score >= 0 ? 'score-positive' : 'score-negative'}">${score > 0 ? '+' : ''}${score}</span></dd>
+        </dl>
+      </div>
+    </aside>
+  </div>
+
+  <div class="back-link">
+    <a href="/servers" class="btn btn-ghost">← Back to Servers</a>
+  </div>
+</div>
+
+<script nonce="${cspNonce}">
+// Read CSRF token dynamically from meta tag — never hardcoded
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
+function copyIP() {
+  const ip = document.getElementById('server-ip-full').textContent.trim();
+  navigator.clipboard.writeText(ip).then(() => {
+    const el = document.getElementById('copy-success');
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 2000);
+  });
+}
+
+async function pingServer(id) {
+  const btn = document.getElementById('ping-btn');
+  btn.textContent = '⏳ Checking...';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/servers/' + id + '/ping');
+
+    // Not logged in
+    if (res.status === 302 || res.status === 401) {
+      btn.textContent = '↻ Refresh';
+      btn.disabled = false;
+      const msg = document.getElementById('vote-msg');
+      if (msg) { msg.textContent = 'Login to refresh server status.'; msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 3000); }
+      return;
+    }
+    // Rate limited
+    if (res.status === 429) {
+      btn.textContent = '↻ Refresh';
+      btn.disabled = false;
+      const msg = document.getElementById('vote-msg');
+      if (msg) { msg.textContent = 'Please wait 30 seconds before pinging again.'; msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 3000); }
+      return;
+    }
+
+    const data = await res.json();
+    const wrap = document.getElementById('status-wrap');
+
+    // Sanitize numeric values — coerce to integer, fall back to 0
+    const players    = parseInt(data.players,    10) || 0;
+    const maxPlayers = parseInt(data.maxPlayers, 10) || 0;
+
+    const pill = document.createElement('span');
+    if (data.online) {
+      pill.className = 'status-pill online';
+      pill.textContent = '🟢 Online · ' + players + ' / ' + maxPlayers + ' players';
+    } else {
+      pill.className = 'status-pill offline';
+      pill.textContent = '🔴 Offline';
+    }
+
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'btn btn-xs btn-ghost ping-btn';
+    refreshBtn.id = 'ping-btn';
+    refreshBtn.textContent = '↻ Refresh';
+    refreshBtn.addEventListener('click', function() { pingServer(id); });
+
+    wrap.innerHTML = '';
+    wrap.appendChild(pill);
+    wrap.appendChild(refreshBtn);
+  } catch(e) {
+    btn.textContent = '↻ Refresh';
+    btn.disabled = false;
+  }
+}
+
+function voteLoginPrompt() {
+  const msg = document.getElementById('vote-msg');
+  msg.textContent = 'Please login to vote!';
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2500);
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Wire ping button
+  const pingBtn = document.getElementById('ping-btn');
+  if (pingBtn && pingBtn.dataset.pingId) {
+    pingBtn.addEventListener('click', () => pingServer(parseInt(pingBtn.dataset.pingId, 10)));
+  }
+  // Wire copy buttons
+  document.querySelectorAll('[data-copy-ip]').forEach(btn => {
+    btn.addEventListener('click', copyIP);
+  });
+  // Wire vote buttons
+  document.querySelectorAll('[data-vote]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const vote = parseInt(btn.dataset.vote, 10);
+      const sid  = parseInt(btn.dataset.serverId, 10);
+      castVote(sid, vote);
+    });
+  });
+  // Wire login-prompt vote buttons
+  document.querySelectorAll('[data-vote-login]').forEach(btn => {
+    btn.addEventListener('click', voteLoginPrompt);
+  });
+});
+
+async function castVote(serverId, vote) {
+  const upBtn   = document.getElementById('upvote-btn');
+  const downBtn = document.getElementById('downvote-btn');
+  const scoreEl = document.getElementById('vote-score');
+  upBtn.disabled = true;
+  downBtn.disabled = true;
+  try {
+    const res = await fetch('/servers/' + serverId + '/vote', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRF-Token': getCsrfToken(),
+      },
+      body: 'vote=' + vote,
+      credentials: 'same-origin',
+    });
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
+
+    // Sanitize: coerce score to integer, userVote to -1/0/1 only
+    const score    = parseInt(data.score, 10) || 0;
+    const userVote = [1, 0, -1].includes(parseInt(data.userVote, 10)) ? parseInt(data.userVote, 10) : 0;
+
+    // textContent is XSS-safe; prefix only after sanitizing to integer
+    scoreEl.textContent = (score > 0 ? '+' : '') + score;
+    scoreEl.className = 'vote-score' + (score > 0 ? ' score-positive' : score < 0 ? ' score-negative' : '');
+
+    upBtn.classList.toggle('active', userVote === 1);
+    downBtn.classList.toggle('active', userVote === -1);
+  } catch(e) {
+    const msg = document.getElementById('vote-msg');
+    msg.textContent = 'Vote failed. Please try again.';
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 3000);
+  } finally {
+    upBtn.disabled = false;
+    downBtn.disabled = false;
+  }
+}
+</script>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

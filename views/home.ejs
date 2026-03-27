@@ -1,0 +1,66 @@
+<%
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function playerBadge(s) {
+  if (s.online) return `<span class="player-badge online">🟢 ${s.player_count}/${s.max_player_count}</span>`;
+  const cached = s.max_player_count > 0 ? `0/${s.max_player_count}` : '0';
+  return `<span class="player-badge offline">🔴 ${cached}</span>`;
+}
+
+body = `
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-content">
+    <h1 class="hero-title">Enjoy Minecraft<br><span class="accent">Without the LootBoxes</span></h1>
+    <p class="hero-sub">Our mission is to provide a community that stands against pay to win without ulterior motives to profit off the movement. This website does not profit aside from donations and contributions.</p>
+    <p class="hero-sub">Discover ${totalServers} community servers. Join the adventure.</p>
+    <form action="/servers" method="GET" class="hero-search">
+      <input type="text" name="q" placeholder="Search by name, IP, description or tags..." class="search-input" autocomplete="off">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    <div class="hero-actions">
+      <a href="/servers/random" class="btn btn-dice">🎲 Random Server</a>
+      ${user ? '<a href="/servers/submit/new" class="btn btn-outline">+ Submit Your Server</a>' : '<a href="/auth/discord" class="btn btn-outline">Login to Submit a Server</a>'}
+    </div>
+  </div>
+</div>
+
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">Recent Non-P2W Servers</h2>
+    <a href="/servers" class="section-more">View All →</a>
+  </div>
+  <div class="server-grid">
+    ${servers.map((s, i) => `
+      <a href="/servers/${s.id}" class="server-card">
+        ${s.banner_filename
+          ? `<div class="server-banner"><img src="/uploads/${escHtml(s.banner_filename)}" alt="${escHtml(s.name)} banner" class="banner-img"${i === 0 ? ' fetchpriority="high"' : ' loading="lazy"'} width="300" height="120"></div>`
+          : `<div class="server-banner banner-placeholder"><span class="banner-icon">⛏</span></div>`
+        }
+        <div class="server-card-body">
+          <div class="server-card-top">
+            <h3 class="server-name">${escHtml(s.name)}</h3>
+            <div class="card-top-right">${playerBadge(s)}</div>
+          </div>
+          <p class="server-ip">${escHtml(s.ip)}${s.port !== 25565 ? ':' + s.port : ''}</p>
+          <p class="server-desc">${s.description ? escHtml(s.description.substring(0, 100)) + (s.description.length > 100 ? '...' : '') : 'No description provided.'}</p>
+          <div class="server-meta">
+            ${s.version ? `<span class="tag">${escHtml(s.version)}</span>` : ''}
+            ${s.tagList.slice(0, 2).map(t => `<span class="tag">${escHtml(t)}</span>`).join('')}
+          </div>
+        </div>
+      </a>
+    `).join('')}
+  </div>
+  ${servers.length === 0 ? '<div class="empty-state"><p>No servers yet. Be the first to submit one!</p></div>' : ''}
+</section>
+`;
+%>
+<%- include('layout', { body: body, title: title, user: user, isAdmin: isAdmin }) %>

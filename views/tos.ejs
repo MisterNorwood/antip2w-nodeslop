@@ -1,0 +1,81 @@
+<%
+const bodyHtml = `
+<div class="legal-page">
+  <h1 class="legal-title">Terms of Service</h1>
+  <p class="legal-updated">Last updated: ${new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'})}</p>
+
+  <div class="legal-section">
+    <h2>1. Acceptance</h2>
+    <p>By using AntiP2W you agree to these terms. If you do not agree, do not use the site. We may update these terms at any time — continued use constitutes acceptance.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>2. What This Site Is</h2>
+    <p>AntiP2W is a community-curated directory of Minecraft servers that do not use pay-to-win mechanics. Listings are submitted by users and reviewed by volunteer admins. We do not operate or endorse any listed server.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>3. Server Submission Rules</h2>
+    <p>By submitting a server you confirm that:</p>
+    <ul>
+      <li>You have the right to submit it (you operate it or have permission)</li>
+      <li>All information provided is accurate to the best of your knowledge</li>
+      <li>The server complies with our non-P2W guidelines</li>
+      <li>The server name, description, and banner do not contain hate speech, illegal content, or excessively offensive material</li>
+      <li>The server is actively running and accessible to players</li>
+      <li>The server is not on platforms that shut down when all players are offline (e.g. Aternos, free hosting)</li>
+    </ul>
+    <p>Submitting false information or attempting to game the system may result in your submissions being rejected and your account being banned.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>4. Content Standards</h2>
+    <p>Server descriptions and names must not:</p>
+    <ul>
+      <li>Contain hate speech, slurs, or discriminatory content</li>
+      <li>Include explicit sexual content</li>
+      <li>Promote illegal activities</li>
+      <li>Impersonate other servers or organisations</li>
+      <li>Contain links to malicious or inappropriate websites</li>
+    </ul>
+    <p>Admins may remove any listing at their discretion.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>5. Account Conduct</h2>
+    <ul>
+      <li>You must use a legitimate Discord account to log in</li>
+      <li>Vote manipulation (creating multiple accounts to boost/suppress servers) is prohibited</li>
+      <li>Attempting to bypass rate limits, exploit security vulnerabilities, or disrupt the service is prohibited</li>
+      <li>Harassment of admins or other users is prohibited</li>
+    </ul>
+  </div>
+
+  <div class="legal-section">
+    <h2>6. Admin Decisions</h2>
+    <p>Admin approval/rejection decisions are final. We do not guarantee any submission will be accepted. Admins are volunteers and may make mistakes — if you believe a rejection was in error, contact us on Discord.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>7. Disclaimers</h2>
+    <ul>
+      <li>We do not guarantee the accuracy or availability of any listed server</li>
+      <li>We are not responsible for the content or conduct of any listed server</li>
+      <li>The service is provided "as is" with no warranty of uptime or reliability</li>
+      <li>We are not liable for any damages arising from use of this site or listed servers</li>
+    </ul>
+  </div>
+
+  <div class="legal-section">
+    <h2>8. Termination</h2>
+    <p>We reserve the right to remove listings, delete accounts, or ban users at any time for violation of these terms or for any other reason at our sole discretion.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>9. Contact</h2>
+    <p>Questions or concerns? Join our <a href="https://dsc.gg/ap2w" target="_blank" rel="noopener noreferrer">Discord server</a>.</p>
+  </div>
+</div>
+`;
+%>
+<%- include('layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

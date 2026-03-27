@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> — AntiP2W</title>
+
+  <%# Core SEO %>
+  <meta name="description" content="<%= locals.metaDescription || 'AntiP2W is a community-curated directory of non-pay-to-win Minecraft servers. Browse, search and discover fair servers where gameplay comes first.' %>">
+  <meta name="keywords" content="<%= locals.metaKeywords || 'minecraft servers, non p2w minecraft, anti pay to win, fair minecraft servers, minecraft server list' %>">
+  <link rel="canonical" href="<%= (process.env.BASE_URL || 'https://antip2w.duckdns.org') + (locals.canonicalPath || '') %>">
+  <meta name="robots" content="<%= locals.noindex ? 'noindex,nofollow' : 'index,follow' %>">
+
+  <%# Open Graph %>
+  <meta property="og:type" content="<%= locals.ogType || 'website' %>">
+  <meta property="og:site_name" content="AntiP2W">
+  <meta property="og:title" content="<%= locals.ogTitle || title + ' — AntiP2W' %>">
+  <meta property="og:description" content="<%= locals.metaDescription || 'A community-curated directory of non-pay-to-win Minecraft servers.' %>">
+  <meta property="og:url" content="<%= (process.env.BASE_URL || 'https://antip2w.duckdns.org') + (locals.canonicalPath || '') %>">
+  <% if (locals.ogImage) { %>
+  <meta property="og:image" content="<%= ogImage %>">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <% } %>
+
+  <%# Twitter Card %>
+  <meta name="twitter:card" content="<%= locals.ogImage ? 'summary_large_image' : 'summary' %>">
+  <meta name="twitter:title" content="<%= locals.ogTitle || title + ' — AntiP2W' %>">
+  <meta name="twitter:description" content="<%= locals.metaDescription || 'A community-curated directory of non-pay-to-win Minecraft servers.' %>">
+  <% if (locals.ogImage) { %>
+  <meta name="twitter:image" content="<%= ogImage %>">
+  <% } %>
+
+  <% if (locals.schemaJson) { %>
+  <script type="application/ld+json" nonce="<%= cspNonce %>"><%-  schemaJson %></script>
+  <% } %>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" as="style" id="gfonts-preload">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap"></noscript>
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="icon" href="/img/Logo.png" type="image/png">
+
+  <% if (locals.csrfToken) { %>
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <% } %>
+</head>
+<body>
+  <div class="scanlines"></div>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="/" class="nav-brand">
+        <span class="brand-icon"></span>
+        <span class="brand-text">AntiP2W</span>
+      </a>
+      <div class="nav-links">
+        <a href="/servers" class="nav-link">Browse</a>
+        <a href="/leaderboard" class="nav-link">Leaderboard</a>
+        <% if (user) { %>
+          <a href="/servers/submit/new" class="nav-link">Submit Server</a>
+          <a href="/servers/requests/mine" class="nav-link">My Submissions<% if (unreadNotifs > 0) { %><span class="notif-badge"><%= unreadNotifs %></span><% } %></a>
+          <% if (isAdmin) { %>
+            <a href="/admin" class="nav-link nav-admin">Admin ▲</a>
+          <% } %>
+          <div class="nav-user">
+            <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=32"
+                 alt="<%= user.username %>" class="nav-avatar" referrerpolicy="no-referrer"
+                 width="32" height="32">
+            <span class="nav-username"><%= user.username %></span>
+            <a href="/auth/logout" class="nav-link nav-logout">Logout</a>
+          </div>
+        <% } else { %>
+          <a href="/auth/discord" class="btn btn-discord">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.045.036.06a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .036-.059c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+            Login with Discord
+          </a>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <%- body %>
+  </main>
+
+  <a href="https://www.youtube.com/@WarfactoryOfficial" class="buddy-container" target="_blank" rel="noopener">
+  <img src="/img/buddy.gif" alt="Warfactory">
+</a>
+  <footer class="footer">
+    <div class="footer-inner">
+      <span>AntiP2W — Community Minecraft Server Directory & Mission</span>
+      <div class="footer-links">
+        <a href="/servers">Browse</a>
+        <a href="/leaderboard">Leaderboard</a>
+        <a href="https://dsc.gg/ap2w" target="_blank" rel="noopener noreferrer">Discord</a>
+        <% if (user) { %><a href="/servers/submit/new">Submit Server</a><% } %>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/tos">Terms of Service</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/main.js" defer nonce="<%= cspNonce %>"></script>
+  <%# Activate the preloaded font stylesheet without using onload= inline handler %>
+  <script nonce="<%= cspNonce %>">
+    (function(){var l=document.getElementById('gfonts-preload');if(l){l.rel='stylesheet';}})();
+  </script>
+</body>
+</html>

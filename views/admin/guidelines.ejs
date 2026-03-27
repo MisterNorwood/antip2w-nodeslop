@@ -1,0 +1,90 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link active">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>Submission Guidelines</h1>
+    </div>
+
+    ${successMsg === 'saved' ? '<div class="alert alert-success">✅ Guidelines saved and now live on the submission page.</div>' : ''}
+
+    <div class="guidelines-editor-layout">
+      <div class="guidelines-editor-pane">
+        <form action="/admin/guidelines" method="POST" id="guidelines-form">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+          <div class="form-group">
+            <label for="guidelines-input">
+              Edit Guidelines
+              <span class="hint">Markdown supported — headings, bold, lists, links, etc.</span>
+            </label>
+            <textarea
+              id="guidelines-input"
+              name="guidelines"
+              class="form-textarea guidelines-textarea"
+              rows="28"
+              maxlength="20000"
+              
+              placeholder="Write your submission guidelines in Markdown..."
+            >${escHtml(guidelines)}</textarea>
+            <span class="char-count" id="char-count">${guidelines.length} / 20000</span>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">💾 Save Guidelines</button>
+            <a href="/admin" class="btn btn-ghost">Cancel</a>
+          </div>
+        </form>
+      </div>
+
+      <div class="guidelines-preview-pane">
+        <div class="guidelines-preview-header">Live Preview</div>
+        <div class="guidelines-preview-body markdown-body" id="guidelines-preview">
+          Loading preview...
+        </div>
+      </div>
+    </div>
+
+    <div class="help-box" class="mt-6">
+      <h3>📝 Markdown Reference</h3>
+      <div class="markdown-ref-grid">
+        <code>## Heading</code><span>Large heading</span>
+        <code>### Sub-heading</code><span>Smaller heading</span>
+        <code>**bold**</code><span><strong>bold text</strong></span>
+        <code>*italic*</code><span><em>italic text</em></span>
+        <code>- item</code><span>Bullet list item</span>
+        <code>[text](url)</code><span>Hyperlink</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@17.0.5/marked.min.js"
+        nonce="${cspNonce}" integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+        crossorigin="anonymous"></script>
+<script nonce="${cspNonce}">
+function updatePreview(md) {
+  document.getElementById('guidelines-preview').innerHTML = marked.parse(md || '');
+  document.getElementById('char-count').textContent = md.length + ' / 20000';
+}
+// Initial render
+updatePreview(document.getElementById('guidelines-input').value);
+</script>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

@@ -1,0 +1,89 @@
+<%
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link active">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>Manage Servers</h1>
+    </div>
+
+    ${successMsg === 'updated' ? '<div class="alert alert-success">✅ Server updated.</div>' : ''}
+    ${successMsg === 'deleted' ? '<div class="alert alert-info">Server deleted.</div>' : ''}
+
+    <form action="/admin/servers" method="GET" class="admin-search-form">
+      <input type="text" name="q" value="${escHtml(query)}" placeholder="Search servers..." class="form-input">
+      <button type="submit" class="btn btn-primary">Search</button>
+      ${query ? '<a href="/admin/servers" class="btn btn-ghost">Clear</a>' : ''}
+    </form>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Banner</th>
+            <th>Server</th>
+            <th>IP</th>
+            <th>Version</th>
+            <th>Added</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${servers.length === 0 ? '<tr><td colspan="6" class="empty-td">No servers found.</td></tr>' :
+            servers.map(s => `
+              <tr>
+                <td>
+                  ${s.banner_filename
+                    ? `<img src="/uploads/${escHtml(s.banner_filename)}" alt="banner" class="table-banner">`
+                    : `<div class="table-banner-empty">—</div>`
+                  }
+                </td>
+                <td>
+                  <strong>${escHtml(s.name)}</strong>
+                  ${s.submitted_by_username ? `<br><small class="muted">by ${escHtml(s.submitted_by_username)}</small>` : ''}
+                </td>
+                <td><code class="ip-small">${escHtml(s.ip)}${s.port !== 25565 ? ':' + s.port : ''}</code></td>
+                <td>${escHtml(s.version) || '—'}</td>
+                <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                <td class="actions-td">
+                  <a href="/admin/servers/${s.id}/edit" class="btn btn-xs btn-ghost">Edit</a>
+                  <a href="/servers/${s.id}" target="_blank" class="btn btn-xs btn-ghost">View</a>
+                  <form action="/admin/servers/${s.id}/delete" method="POST" class="inline-form"
+                        data-confirm='Delete ${escHtml(s.name).replace(/'/g, '\\x27')}? This cannot be undone.'>
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+                    <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            `).join('')
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

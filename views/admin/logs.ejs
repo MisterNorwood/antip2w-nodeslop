@@ -1,0 +1,119 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+const ACTION_LABELS = {
+  approve_request: { label: '✅ Approved Request', cls: 'log-approve' },
+  reject_request:  { label: '❌ Rejected Request', cls: 'log-reject' },
+  approve_update:  { label: '✅ Approved Update',  cls: 'log-approve' },
+  reject_update:   { label: '❌ Rejected Update',  cls: 'log-reject' },
+  edit_server:     { label: '✏️ Edited Server',    cls: 'log-edit' },
+  delete_server:   { label: '🗑️ Deleted Server',   cls: 'log-delete' },
+  add_admin:       { label: '🛡️ Added Admin',       cls: 'log-admin' },
+  remove_admin:  { label: '🚫 Removed Admin',     cls: 'log-admin' },
+  edit_guidelines: { label: '📜 Edited Guidelines',  cls: 'log-edit'  },
+  blacklist_ip:    { label: '🚫 Blacklisted IP',      cls: 'log-delete' },
+  unblacklist_ip:  { label: '✅ Removed from Blacklist', cls: 'log-approve' },
+  auto_reject_blacklisted: { label: '🤖 Auto-Rejected (Blacklisted IP)', cls: 'log-reject' },
+  user_submit:          { label: '📥 User Submitted Server',    cls: 'log-user' },
+  user_submit_update:   { label: '🔄 User Submitted Update',    cls: 'log-user' },
+  user_edit_submission: { label: '✏️ User Edited Submission',   cls: 'log-user' },
+  user_cancel_submission: { label: '🗑️ User Cancelled Submission', cls: 'log-user' },
+  user_delete_server:   { label: '🗑️ User Deleted Live Server', cls: 'log-delete' },
+};
+
+function qs(p) {
+  const params = new URLSearchParams();
+  if (filterAdmin) params.set('admin', filterAdmin);
+  if (filterAction) params.set('action', filterAction);
+  params.set('page', p);
+  return '?' + params.toString();
+}
+
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link active">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>Admin Activity Logs</h1>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="muted">${total} total entries</span>
+        ${isOwner ? `
+        <form action="/admin/logs/delete-all" method="POST" class="inline-form"
+              data-confirm="Delete ALL log entries? This cannot be undone.">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+          <button type="submit" class="btn btn-xs btn-danger">🗑️ Clear All Logs</button>
+        </form>` : ''}
+      </div>
+    </div>
+
+    ${successMsg === 'deleted' ? '<div class="alert alert-info">Log entry deleted.</div>' : ''}
+
+    <form action="/admin/logs" method="GET" class="log-filter-form">
+      <select name="admin" class="form-input form-input-sm">
+        <option value="">All Admins</option>
+        ${admins.map(a => `<option value="${escHtml(a.admin_discord_id)}" ${filterAdmin === a.admin_discord_id ? 'selected' : ''}>${escHtml(a.admin_username || a.admin_discord_id)}</option>`).join('')}
+      </select>
+      <select name="action" class="form-input form-input-sm">
+        <option value="">All Actions</option>
+        ${actionTypes.map(a => `<option value="${escHtml(a)}" ${filterAction === a ? 'selected' : ''}>${escHtml((ACTION_LABELS[a] || {}).label || a)}</option>`).join('')}
+      </select>
+      <button type="submit" class="btn btn-primary">Filter</button>
+      ${filterAdmin || filterAction ? '<a href="/admin/logs" class="btn btn-ghost">Clear</a>' : ''}
+    </form>
+
+    <div class="log-list">
+      ${logs.length === 0 ? '<div class="empty-state"><p>No log entries found.</p></div>' :
+        logs.map(l => {
+          const info = ACTION_LABELS[l.action] || { label: l.action, cls: '' };
+          return `
+          <div class="log-entry ${info.cls}">
+            <div class="log-entry-left">
+              <span class="log-action-badge">${info.label}</span>
+              <span class="log-target">
+                ${l.target_name ? `<strong>${escHtml(l.target_name)}</strong>` : ''}
+                ${l.target_id ? `<span class="muted">#${l.target_id}</span>` : ''}
+              </span>
+              ${l.reason ? `<span class="log-reason">Reason: ${escHtml(l.reason)}</span>` : ''}
+            </div>
+            <div class="log-entry-right">
+              <span class="log-admin">by <strong>${escHtml(l.admin_username || l.admin_discord_id)}</strong></span>
+              <span class="log-time muted">${new Date(l.created_at).toLocaleString()}</span>
+              ${isOwner ? `
+              <form action="/admin/logs/${l.id}/delete" method="POST" class="inline-form"
+                    data-confirm="Delete this log entry?">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+                <button type="submit" class="btn btn-xs btn-danger" title="Delete entry">✕</button>
+              </form>` : ''}
+            </div>
+          </div>
+        `}).join('')
+      }
+    </div>
+
+    ${totalPages > 1 ? `
+      <div class="pagination" style="margin-top:24px">
+        ${currentPage > 1 ? `<a href="${qs(currentPage-1)}" class="page-btn page-nav">← Prev</a>` : ''}
+        <span class="page-btn active">${currentPage} / ${totalPages}</span>
+        ${currentPage < totalPages ? `<a href="${qs(currentPage+1)}" class="page-btn page-nav">Next →</a>` : ''}
+      </div>
+    ` : ''}
+  </div>
+</div>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

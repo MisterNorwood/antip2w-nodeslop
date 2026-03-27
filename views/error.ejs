@@ -1,0 +1,14 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const bodyHtml = `
+<div class="error-page">
+  <div class="error-code">${escHtml(String(code || 500))}</div>
+  <h1 class="error-title">${escHtml(title)}</h1>
+  <p class="error-message">${escHtml(message)}</p>
+  <a href="/" class="btn btn-primary">Go Home</a>
+</div>
+`;
+%>
+<%- include('layout', { body: bodyHtml, title: escHtml(title), user: locals.user || null, isAdmin: locals.isAdmin || false }) %>

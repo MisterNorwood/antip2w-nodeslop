@@ -1,0 +1,26 @@
+{
+  "name": "mcservers",
+  "version": "1.0.0",
+  "description": "Minecraft server listing website with Discord OAuth",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "connect-sqlite3": "^0.9.16",
+    "csurf": "^1.11.0",
+    "dotenv": "^17.3.1",
+    "ejs": "^5.0.1",
+    "express": "^4.22.1",
+    "express-session": "^1.19.0",
+    "marked": "^17.0.5",
+    "multer": "^2.1.1",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

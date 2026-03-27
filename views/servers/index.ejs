@@ -1,0 +1,140 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function playerBadge(s) {
+  if (s.online) return `<span class="player-badge online">🟢 ${s.player_count}/${s.max_player_count}</span>`;
+  const cached = s.max_player_count > 0 ? `0/${s.max_player_count}` : '0';
+  return `<span class="player-badge offline">🔴 ${cached}</span>`;
+}
+
+function serverCard(s, idx) {
+  const desc = s.description
+    ? escHtml(s.description.substring(0, 120)) + (s.description.length > 120 ? '...' : '')
+    : '<em>No description provided.</em>';
+  const ip = escHtml(s.ip) + (s.port !== 25565 ? ':' + s.port : '');
+  const websiteBtn = s.website_url && /^https?:\/\//i.test(s.website_url)
+    ? `<a href="${escHtml(s.website_url)}" target="_blank" rel="noopener noreferrer" class="server-link-btn" data-stop-propagation>🌐</a>`
+    : '';
+  const tags = s.tagList.slice(0, 3)
+    .map(t => `<a href="/servers?tag=${encodeURIComponent(t)}" class="tag" data-stop-propagation>${escHtml(t)}</a>`)
+    .join('');
+  const score = s.vote_score || 0;
+  const scoreCls = score > 0 ? 'score-positive' : score < 0 ? 'score-negative' : '';
+  // First card is likely the LCP element — high priority, no lazy load
+  const imgAttrs = idx === 0
+    ? 'fetchpriority="high" width="300" height="120"'
+    : 'loading="lazy" width="300" height="120"';
+
+  return `
+    <div data-open-url="/servers/${s.id}" class="server-card">
+      ${s.banner_filename
+        ? `<div class="server-banner"><img src="/uploads/${escHtml(s.banner_filename)}" alt="${escHtml(s.name)} banner" class="banner-img" ${imgAttrs}></div>`
+        : `<div class="server-banner banner-placeholder"><span class="banner-icon">⛏</span></div>`
+      }
+      <div class="server-card-body">
+        <div class="server-card-top">
+          <h3 class="server-name">${escHtml(s.name)}</h3>
+          <div class="card-top-right">
+            ${playerBadge(s)}
+            ${websiteBtn}
+          </div>
+        </div>
+        <p class="server-ip">${ip}</p>
+        <p class="server-desc">${desc}</p>
+        <div class="server-card-footer">
+          <div class="server-meta">
+            ${s.version ? `<span class="tag tag-version">${escHtml(s.version)}</span>` : ''}
+            ${tags}
+          </div>
+          <span class="card-vote-score ${scoreCls}" title="Community rating">${score > 0 ? '+' : ''}${score}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function pagination(currentPage, totalPages, query, filterTag, sortKey) {
+  if (totalPages <= 1) return '';
+  const qs = (p) => {
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (filterTag) params.set('tag', filterTag);
+    if (sortKey && sortKey !== 'online') params.set('sort', sortKey);
+    params.set('page', p);
+    return '?' + params.toString();
+  };
+  let pages = '';
+  const range = 2;
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - range && i <= currentPage + range)) {
+      pages += `<a href="${qs(i)}" class="page-btn ${i === currentPage ? 'active' : ''}">${i}</a>`;
+    } else if (i === currentPage - range - 1 || i === currentPage + range + 1) {
+      pages += `<span class="page-ellipsis">…</span>`;
+    }
+  }
+  return `
+    <div class="pagination">
+      ${currentPage > 1 ? `<a href="${qs(currentPage - 1)}" class="page-btn page-nav">← Prev</a>` : ''}
+      ${pages}
+      ${currentPage < totalPages ? `<a href="${qs(currentPage + 1)}" class="page-btn page-nav">Next →</a>` : ''}
+    </div>
+  `;
+}
+
+function sortUrl(key) {
+  const params = new URLSearchParams();
+  if (query) params.set('q', query);
+  if (filterTag) params.set('tag', filterTag);
+  params.set('sort', key);
+  return '?' + params.toString();
+}
+
+const bodyHtml = `
+<div class="page-header">
+  <h1 class="page-title">Browse Servers</h1>
+  <p class="page-sub">Discover community Minecraft servers</p>
+</div>
+
+<div class="search-bar-wrap">
+  <form action="/servers" method="GET" class="search-form">
+    <input type="text" name="q" value="${escHtml(query)}" placeholder="Search by name, IP, description or tags..." class="search-input" autocomplete="off">
+    ${filterTag ? `<input type="hidden" name="tag" value="${escHtml(filterTag)}">` : ''}
+    ${sortKey && sortKey !== 'online' ? `<input type="hidden" name="sort" value="${escHtml(sortKey)}">` : ''}
+    <button type="submit" class="btn btn-primary">Search</button>
+    <a href="/servers/random" class="btn btn-dice" title="Random server">🎲 Random</a>
+    ${query || filterTag ? '<a href="/servers" class="btn btn-ghost">Clear</a>' : ''}
+  </form>
+  ${filterTag ? `<div class="active-filter">Filtering by tag: <span class="tag">${escHtml(filterTag)}</span></div>` : ''}
+</div>
+
+<div class="sort-bar">
+  <span class="sort-label">Sort by:</span>
+  <a href="${sortUrl('online')}"  class="sort-btn ${sortKey === 'online'  ? 'active' : ''}">🟢 Online First</a>
+  <a href="${sortUrl('top')}"     class="sort-btn ${sortKey === 'top'     ? 'active' : ''}">⬆️ Highest Rated</a>
+  <a href="${sortUrl('bottom')}"  class="sort-btn ${sortKey === 'bottom'  ? 'active' : ''}">⬇️ Lowest Rated</a>
+  <a href="${sortUrl('newest')}"  class="sort-btn ${sortKey === 'newest'  ? 'active' : ''}">🆕 Newest</a>
+  <a href="${sortUrl('oldest')}"  class="sort-btn ${sortKey === 'oldest'  ? 'active' : ''}">📅 Oldest</a>
+</div>
+
+<div class="server-grid server-grid-full">
+  ${servers.map((s, i) => serverCard(s, i)).join('')}
+</div>
+
+${servers.length === 0 ? `
+  <div class="empty-state">
+    <div class="empty-icon">🔍</div>
+    <h2>No servers found</h2>
+    <p>Try a different search or be the first to submit a server!</p>
+    <a href="/servers/submit/new" class="btn btn-primary">Submit a Server</a>
+  </div>
+` : `
+  <div class="results-meta">
+    <p class="results-count">Showing ${servers.length} of ${total} server${total !== 1 ? 's' : ''}</p>
+    ${pagination(currentPage, totalPages, query, filterTag, sortKey)}
+  </div>
+`}
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

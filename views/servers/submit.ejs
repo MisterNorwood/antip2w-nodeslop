@@ -1,0 +1,160 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// Escape guidelinesHtml for safe use inside a JS template literal
+// (replace backticks and ${ which would break the template string)
+const safeGuidelines = (guidelinesHtml || '')
+  .replace(/\\/g, '\\\\')
+  .replace(/`/g, '\\`')
+  .replace(/\$\{/g, '\\${');
+
+const pageTitle = isUpdate ? ('Update: ' + escHtml(request.name)) : 'Submit a Server';
+const formAction = isUpdate ? ('/servers/my-servers/' + request.id + '/update') : '/servers/submit/new';
+
+const updateAlert = isUpdate ? `
+    <div class="alert alert-info">
+      <strong>Updating:</strong> ${escHtml(request.name)} &nbsp;<code>${escHtml(request.ip)}</code><br>
+      <span class="muted">Fields are pre-filled with your current listing. Change only what you need to update.</span>
+    </div>` : '';
+
+const errorsHtml = (errors && errors.length) ? `
+      <div class="alert alert-error">
+        <strong>Please fix the following errors:</strong>
+        <ul>${errors.map(e => '<li>' + escHtml(e) + '</li>').join('')}</ul>
+      </div>` : '';
+
+const currentBanner = (isUpdate && request.banner_filename) ? `
+          <div class="current-banner">
+            <img src="/uploads/${escHtml(request.banner_filename)}" alt="Current banner" class="current-banner-img">
+            <label class="checkbox-label">
+              <input type="checkbox" name="remove_banner" value="1" id="remove_banner">
+              Remove current banner
+            </label>
+          </div>` : '';
+
+const bodyHtml = `
+<div class="form-page submit-page-layout">
+
+  ${safeGuidelines ? `
+  <aside class="guidelines-sidebar">
+    <div class="guidelines-sidebar-header">📜 Submission Guidelines</div>
+    <div class="guidelines-sidebar-body markdown-body">
+      ${safeGuidelines}
+    </div>
+  </aside>` : ''}
+
+  <div class="submit-form-wrap">
+    <div class="form-header">
+      <h1 class="page-title">${isUpdate ? '🔄 Submit an Update' : 'Submit a Server'}</h1>
+      <p class="page-sub">${isUpdate
+        ? 'Your update will be reviewed before going live. Your current listing will remain unchanged until approved.'
+        : 'Your submission will be reviewed by an admin before going live.'}</p>
+    </div>
+
+    ${updateAlert}
+    ${errorsHtml}
+
+    <form action="${formAction}" method="POST" enctype="multipart/form-data" class="form-card">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+
+      <div class="form-group">
+        <label for="name">Server Name <span class="required">*</span></label>
+        <input type="text" id="name" name="name" class="form-input"
+          value="${isUpdate ? escHtml(request.name) : ''}"
+          placeholder="My Awesome Server" required maxlength="80">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ip">Server IP / Hostname <span class="required">*</span></label>
+          <input type="text" id="ip" name="ip" class="form-input"
+            value="${isUpdate ? escHtml(request.ip) : ''}"
+            placeholder="play.example.com" required maxlength="255">
+        </div>
+        <div class="form-group form-group-sm">
+          <label for="port">Port</label>
+          <input type="number" id="port" name="port" class="form-input"
+            value="${isUpdate ? (request.port || 25565) : 25565}" min="1" max="65535">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="version">Minecraft Version</label>
+          <input type="text" id="version" name="version" class="form-input"
+            value="${isUpdate ? escHtml(request.version || '') : ''}"
+            placeholder="1.20.4 / Bedrock / Any" maxlength="30">
+        </div>
+        <div class="form-group">
+          <label for="website_url">Website URL</label>
+          <input type="url" id="website_url" name="website_url" class="form-input"
+            value="${isUpdate ? escHtml(request.website_url || '') : ''}"
+            placeholder="https://example.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="tags">Tags <span class="hint">(comma separated, e.g. Survival, PvP, Economy)</span></label>
+        <input type="text" id="tags" name="tags" class="form-input"
+          value="${isUpdate ? escHtml(request.tags || '') : ''}"
+          placeholder="Survival, SMP, Vanilla" maxlength="200">
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" class="form-textarea" rows="6"
+          placeholder="Describe your server — features, community, rules, etc."
+          maxlength="2000">${isUpdate ? escHtml(request.description || '') : ''}</textarea>
+        <span class="char-count" id="desc-count">${isUpdate ? (request.description || '').length : 0} / 2000</span>
+      </div>
+
+      <div class="form-group">
+        <label>Banner Image <span class="hint">(GIF, PNG, JPG, WebP — max 5MB)</span></label>
+        ${currentBanner}
+        <div class="file-upload-area" id="upload-area">
+          <input type="file" id="banner" name="banner"
+            accept=".gif,.png,.jpg,.jpeg,.webp" class="file-input" data-preview>
+          <div class="upload-placeholder" id="upload-placeholder">
+            <span class="upload-icon">🖼️</span>
+            <span>${(isUpdate && request.banner_filename) ? 'Upload a new banner to replace current' : 'Drag &amp; drop or click to upload banner'}</span>
+            ${!isUpdate ? '<span class="upload-hint">Animated GIFs are supported!</span>' : ''}
+          </div>
+          <img id="banner-preview" class="banner-preview hidden" alt="Banner preview">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-lg">
+          ${isUpdate ? '🔄 Submit Update for Review' : 'Submit for Review'}
+        </button>
+        <a href="/servers/requests/mine" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+`;
+%>
+
+<script nonce="${cspNonce}">
+document.addEventListener('DOMContentLoaded', function() {
+  var form = document.querySelector('form[enctype="multipart/form-data"]');
+  if (!form) return;
+  form.addEventListener('submit', function(e) {
+    if (form.dataset.confirm && !confirm(form.dataset.confirm)) { e.preventDefault(); return; }
+    e.preventDefault();
+    var token = getCsrfToken();
+    var data = new FormData(form);
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': token },
+      body: data,
+      credentials: 'same-origin'
+    }).then(function(res) {
+      if (res.redirected) { window.location.href = res.url; return; }
+      return res.text().then(function(html) { document.open(); document.write(html); document.close(); });
+    });
+  });
+});
+</script>
+<%- include('../layout', { body: bodyHtml, title: pageTitle, user: user, isAdmin: isAdmin }) %>

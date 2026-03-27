@@ -1,0 +1,16 @@
+<%
+const bodyHtml = `
+<div class="submitted-page">
+  <div class="submitted-icon">🎉</div>
+  <h1 class="submitted-title">Server Submitted!</h1>
+  <p class="submitted-sub">Your server has been submitted and is now <strong>pending review</strong> by an admin.</p>
+  <p class="submitted-sub">You'll be able to track its status on your submissions page. Once approved, it will appear in the server list.</p>
+  <div class="submitted-actions">
+    <a href="/servers/requests/mine" class="btn btn-primary">View My Submissions</a>
+    <a href="/servers/submit/new" class="btn btn-outline">Submit Another Server</a>
+    <a href="/servers" class="btn btn-ghost">Browse Servers</a>
+  </div>
+</div>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

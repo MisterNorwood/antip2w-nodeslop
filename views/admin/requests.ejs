@@ -1,0 +1,138 @@
+<%
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link active">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>Server Requests</h1>
+    </div>
+
+    ${successMsg === 'approved' ? '<div class="alert alert-success">✅ Server approved and now live!</div>' : ''}
+    ${successMsg === 'rejected' ? '<div class="alert alert-info">Request rejected.</div>' : ''}
+
+    <div class="filter-tabs">
+      <a href="/admin/requests?status=pending" class="filter-tab ${statusFilter === 'pending' ? 'active' : ''}">Pending</a>
+      <a href="/admin/requests?status=approved" class="filter-tab ${statusFilter === 'approved' ? 'active' : ''}">Approved</a>
+      <a href="/admin/requests?status=rejected" class="filter-tab ${statusFilter === 'rejected' ? 'active' : ''}">Rejected</a>
+    </div>
+
+    ${requests.length === 0 ? `
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>No ${statusFilter} requests.</p>
+      </div>
+    ` : requests.map(r => {
+      const safeWebsite = /^https?:\/\//i.test(r.website_url || '') ? escHtml(r.website_url) : '';
+      const ipKey = (r.ip || '').trim().toLowerCase();
+      const blacklistReason = blacklistMap && blacklistMap[ipKey] !== undefined ? blacklistMap[ipKey] : null;
+      const isBlacklisted = blacklistReason !== null;
+      return `
+      <div class="request-review-card ${isBlacklisted ? 'request-blacklisted' : ''}">
+        ${r.banner_filename ? `<img src="/uploads/${escHtml(r.banner_filename)}" alt="banner" class="review-banner">` : ''}
+        <div class="review-body">
+          <div class="review-header">
+            <div>
+              <h3 class="review-name">${escHtml(r.name)} ${r.update_of_server_id ? '<span class="tag tag-update">🔄 Update Request</span>' : ''}</h3>
+              <p class="review-ip">
+                <code>${escHtml(r.ip)}${r.port !== 25565 ? ':' + r.port : ''}</code>
+                ${r.version ? `<span class="tag">${escHtml(r.version)}</span>` : ''}
+                ${isBlacklisted ? `<span class="tag tag-blacklisted" title="${escHtml(blacklistReason || 'No reason given')}">🚫 Blacklisted IP</span>` : ''}
+              </p>
+              ${r.update_of_server_id ? `<p class="update-notice">📝 This will <strong>replace</strong> the current live listing if approved. Rejection will not affect the live server.</p>` : ''}
+              ${isBlacklisted ? `<p class="blacklist-warning">⚠️ This IP is on the blacklist${blacklistReason ? ': ' + escHtml(blacklistReason) : ''}.</p>` : ''}
+              <p class="review-meta">Submitted by <strong>${escHtml(r.submitted_by_username)}</strong> (ID: ${escHtml(r.submitted_by_discord_id)}) on ${new Date(r.created_at).toLocaleString()}</p>
+            </div>
+            <span class="status-badge status-${r.status}">${r.status}</span>
+          </div>
+
+          ${r.description ? `<p class="review-desc">${escHtml(r.description.substring(0, 300))}${r.description.length > 300 ? '...' : ''}</p>` : ''}
+
+          ${safeWebsite ? `<p class="review-link">🌐 <a href="${safeWebsite}" target="_blank" rel="noopener noreferrer">${escHtml(r.website_url)}</a></p>` : ''}
+          ${r.tags ? `<div class="review-tags">${r.tags.split(',').map(t => `<span class="tag">${escHtml(t.trim())}</span>`).join('')}</div>` : ''}
+
+          ${r.status === 'pending' ? `
+            <div class="review-actions">
+              <form action="/admin/requests/${r.id}/approve" method="POST" class="inline-form">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+                <button type="submit" class="btn btn-success" ${isBlacklisted ? 'title="Warning: IP is blacklisted!"' : ''}>✅ Approve${isBlacklisted ? ' ⚠️' : ''}</button>
+              </form>
+              <form action="/admin/requests/${r.id}/reject" method="POST" class="reject-form" data-id="${r.id}">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+                <button type="button" class="btn btn-danger" data-reject-id="${r.id}" data-blacklist-reason="${isBlacklisted ? escHtml(blacklistReason || '') : 'null'}">❌ Reject</button>
+              </form>
+            </div>
+          ` : r.review_note ? `<p class="review-note"><strong>Note:</strong> ${escHtml(r.review_note)}</p>` : ''}
+        </div>
+      </div>
+    `}).join('')}
+  </div>
+</div>
+`;
+%>
+<script nonce="<%= cspNonce %>">
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[data-reject-id]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = parseInt(btn.dataset.rejectId, 10);
+      var rawReason = btn.dataset.blacklistReason;
+      var existingReason = rawReason === 'null' ? null : rawReason;
+      rejectWithNote(id, existingReason);
+    });
+  });
+});
+function rejectWithNote(id, existingReason) {
+  var note;
+  if (existingReason !== null && existingReason !== '') {
+    note = prompt('Rejection reason (pre-filled from blacklist):', existingReason);
+  } else {
+    note = prompt('Rejection reason (optional):');
+  }
+  if (note === null) return;
+  note = note.trim();
+
+  var addToBlacklist = '0';
+  if (note && existingReason === null) {
+    if (confirm('Also add this IP to the blacklist?\nFuture submissions from this IP will be auto-rejected with this reason.')) {
+      addToBlacklist = '1';
+    }
+  }
+
+  var token = (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '';
+  var body = new URLSearchParams({ note: note, blacklist: addToBlacklist });
+
+  fetch('/admin/requests/' + id + '/reject', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body,
+    credentials: 'same-origin'
+  }).then(function(res) {
+    if (res.redirected) { window.location.href = res.url; return; }
+    return res.text().then(function(html) { document.open(); document.write(html); document.close(); });
+  }).catch(function() {
+    alert('Request failed. Please try again.');
+  });
+}
+</script>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

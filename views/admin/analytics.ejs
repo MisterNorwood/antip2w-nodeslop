@@ -1,0 +1,140 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link active">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>Analytics</h1>
+      <span class="muted">Last 30 days</span>
+    </div>
+
+    <!-- Today at a glance -->
+    <div class="stats-grid" style="margin-bottom:28px">
+      <div class="stat-card">
+        <div class="stat-icon">👁️</div>
+        <div class="stat-value">${today.views || 0}</div>
+        <div class="stat-label">Page Views Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🧑‍💻</div>
+        <div class="stat-value">${today.unique_visitors || 0}</div>
+        <div class="stat-label">Unique Visitors Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🔐</div>
+        <div class="stat-value">${today.logins || 0}</div>
+        <div class="stat-label">Logins Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-value">${totals.total_views || 0}</div>
+        <div class="stat-label">Views (30 days)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value">${totals.unique_visitors || 0}</div>
+        <div class="stat-label">Unique Visitors (30 days)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🔑</div>
+        <div class="stat-value">${totals.unique_users || 0}</div>
+        <div class="stat-label">Unique Logged-in Users (30 days)</div>
+      </div>
+    </div>
+
+    <!-- Page views chart -->
+    <div class="admin-section">
+      <h2 class="admin-section-title">Daily Page Views — Last 30 Days</h2>
+      <div class="chart-wrap">
+        <canvas id="viewsChart" height="80"></canvas>
+      </div>
+    </div>
+
+    <!-- Logins chart -->
+    <div class="admin-section">
+      <h2 class="admin-section-title">Daily Logins — Last 30 Days</h2>
+      <div class="chart-wrap">
+        <canvas id="loginsChart" height="80"></canvas>
+      </div>
+    </div>
+
+    <!-- Top pages -->
+    <div class="admin-section">
+      <h2 class="admin-section-title">Top Pages (30 days)</h2>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Path</th><th>Views</th></tr></thead>
+          <tbody>
+            ${topPages.map(p => `
+              <tr>
+                <td><code>${escHtml(p.path)}</code></td>
+                <td>${p.views}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script nonce="${cspNonce}" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script nonce="${cspNonce}">
+(function() {
+  const viewsData  = ${JSON.stringify(dailyViews)};
+  const loginsData = ${JSON.stringify(dailyLogins)};
+
+  function makeChart(id, labels, datasets) {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#94a3b8' } } },
+        scales: {
+          x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+          y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' }, beginAtZero: true },
+        }
+      }
+    });
+  }
+
+  makeChart('viewsChart',
+    viewsData.map(r => r.day),
+    [
+      { label: 'Page Views',       data: viewsData.map(r => r.views),            borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', tension: 0.3, fill: true },
+      { label: 'Unique Visitors',  data: viewsData.map(r => r.unique_visitors),  borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.08)', tension: 0.3, fill: false },
+    ]
+  );
+
+  makeChart('loginsChart',
+    loginsData.map(r => r.day),
+    [
+      { label: 'Total Logins',   data: loginsData.map(r => r.logins),       borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.1)', tension: 0.3, fill: true },
+      { label: 'Unique Users',   data: loginsData.map(r => r.unique_users), borderColor: '#fb923c', backgroundColor: 'rgba(251,146,60,0.08)',  tension: 0.3, fill: false },
+    ]
+  );
+})();
+</script>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

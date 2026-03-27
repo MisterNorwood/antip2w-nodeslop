@@ -1,0 +1,92 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link active">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>IP Blacklist</h1>
+      <span class="muted">${entries.length} blocked IP${entries.length !== 1 ? 's' : ''}</span>
+    </div>
+
+    ${successMsg === 'added'   ? '<div class="alert alert-success">✅ IP added to blacklist.</div>' : ''}
+    ${successMsg === 'removed' ? '<div class="alert alert-info">IP removed from blacklist.</div>' : ''}
+    ${errorMsg   === 'no_ip'  ? '<div class="alert alert-error">❌ Please enter an IP address.</div>' : ''}
+
+    <div class="form-card form-card-compact">
+      <h2 class="form-card-title">Add IP to Blacklist</h2>
+      <p class="form-card-sub">Manually blacklist an IP. Future submissions from this address will be automatically rejected.</p>
+      <form action="/admin/blacklist/add" method="POST" class="inline-form-row">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+        <input type="text" name="ip" class="form-input" placeholder="e.g. play.example.com or 192.168.1.1" required maxlength="255">
+        <input type="text" name="reason" class="form-input" placeholder="Reason (recommended)" maxlength="500">
+        <button type="submit" class="btn btn-danger">🚫 Blacklist</button>
+      </form>
+    </div>
+
+    <div class="admin-section">
+      <h2 class="admin-section-title">Blacklisted IPs</h2>
+      ${entries.length === 0 ? `
+        <div class="empty-state">
+          <div class="empty-icon">✅</div>
+          <p>No IPs are currently blacklisted.</p>
+        </div>
+      ` : `
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>IP / Hostname</th>
+                <th>Reason</th>
+                <th>Added By</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries.map(e => `
+                <tr>
+                  <td><code class="ip-small">${escHtml(e.ip)}</code></td>
+                  <td>${e.reason ? escHtml(e.reason) : '<em class="muted">No reason given</em>'}</td>
+                  <td><code>${escHtml(e.added_by || '—')}</code></td>
+                  <td>${new Date(e.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <form action="/admin/blacklist/${e.id}/remove" method="POST" class="inline-form"
+                          data-confirm='Remove ${escHtml(e.ip)} from blacklist?'>
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+                      <button type="submit" class="btn btn-xs btn-ghost">Remove</button>
+                    </form>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+
+    <div class="help-box">
+      <h3>ℹ️ How the blacklist works</h3>
+      <p>When a server is rejected with a reason, you can optionally add its IP to the blacklist. Any future submission using that exact IP will be automatically rejected with a note referencing the original rejection reason, and the event is logged.</p>
+      <p>You can also add IPs manually above. The check is case-insensitive and matches the exact IP/hostname submitted.</p>
+    </div>
+  </div>
+</div>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

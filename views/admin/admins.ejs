@@ -1,0 +1,103 @@
+<%
+const bodyHtml = `
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar-title">Admin Panel</div>
+    <nav class="admin-nav">
+      <a href="/admin" class="admin-nav-link">📊 Dashboard</a>
+      <a href="/admin/requests" class="admin-nav-link">📬 Requests</a>
+      <a href="/admin/servers" class="admin-nav-link">🌐 Servers</a>
+      <a href="/admin/logs" class="admin-nav-link">📋 Logs</a>
+      <a href="/admin/guidelines" class="admin-nav-link">📜 Guidelines</a>
+      <a href="/admin/admins" class="admin-nav-link active">🛡️ Admins</a>
+      <a href="/admin/blacklist" class="admin-nav-link">🚫 Blacklist</a>
+      <a href="/admin/analytics" class="admin-nav-link">📈 Analytics</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-page-header">
+      <h1>Manage Admins</h1>
+    </div>
+
+    ${successMsg === 'added' ? '<div class="alert alert-success">✅ Admin added successfully.</div>' : ''}
+    ${successMsg === 'removed' ? '<div class="alert alert-info">Admin removed.</div>' : ''}
+    ${errorMsg === 'cannot_remove_self' ? '<div class="alert alert-error">❌ You cannot remove yourself as an admin.</div>' : ''}
+
+    ${errors && errors.length ? `
+      <div class="alert alert-error">
+        <ul>${errors.map(e => `<li>${e}</li>`).join('')}</ul>
+      </div>
+    ` : ''}
+
+    <div class="form-card form-card-compact">
+      <h2 class="form-card-title">Add New Admin</h2>
+      <p class="form-card-sub">Paste a Discord User ID (17–20 digit number). You can find this by enabling Developer Mode in Discord, then right-clicking a user → Copy User ID.</p>
+      <form action="/admin/admins/add" method="POST" class="inline-form-row">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+        <input type="text" name="discord_id" class="form-input" placeholder="Discord ID e.g. 123456789012345678" pattern="[0-9]{17,20}" required>
+        <input type="text" name="discord_username" class="form-input" placeholder="Discord username (optional)" maxlength="64">
+        <button type="submit" class="btn btn-primary">Add Admin</button>
+      </form>
+    </div>
+
+    <div class="admin-section">
+      <h2 class="admin-section-title">Current Admins</h2>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Discord Username</th>
+              <th>Discord ID</th>
+              <th>Added By</th>
+              <th>Date Added</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${admins.map(a => `
+              <tr ${a.discord_id === user.id ? 'class="row-self"' : ''}>
+                <td>
+                  ${a.discord_username
+                    ? `<span class="discord-username">@${a.discord_username}</span>`
+                    : '<em class="muted">Unknown</em>'
+                  }
+                  ${a.discord_id === user.id ? '<span class="tag tag-you">You</span>' : ''}
+                </td>
+                <td>
+                  <code class="discord-id">${a.discord_id}</code>
+                </td>
+                <td>${a.added_by === 'system' ? '<em class="muted">System (initial)</em>' : `<code>${a.added_by}</code>`}</td>
+                <td>${new Date(a.created_at).toLocaleDateString()}</td>
+                <td>
+                  ${a.discord_id !== user.id ? `
+                    <form action="/admin/admins/${a.id}/delete" method="POST" class="inline-form"
+                          data-confirm='Remove this admin?'>
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+                      <button type="submit" class="btn btn-xs btn-danger">Remove</button>
+                    </form>
+                  ` : '<span class="muted">—</span>'}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="help-box">
+      <h3>🔍 How to find a Discord User ID</h3>
+      <ol>
+        <li>Open Discord and go to <strong>Settings → Advanced</strong></li>
+        <li>Enable <strong>Developer Mode</strong></li>
+        <li>Right-click on any user's name or profile</li>
+        <li>Click <strong>Copy User ID</strong></li>
+        <li>Paste that number above</li>
+      </ol>
+      <p class="muted" class="mt-4">Discord usernames are auto-updated the next time each admin logs in.</p>
+    </div>
+  </div>
+</div>
+`;
+%>
+<%- include('../layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>

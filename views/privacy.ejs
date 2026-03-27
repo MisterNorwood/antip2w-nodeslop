@@ -1,0 +1,95 @@
+<%
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const BASE_URL = process.env.BASE_URL || 'https://antip2w.duckdns.org';
+const bodyHtml = `
+<div class="legal-page">
+  <h1 class="legal-title">Privacy Policy</h1>
+  <p class="legal-updated">Last updated: ${new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'})}</p>
+
+  <div class="legal-section">
+    <h2>1. Who We Are</h2>
+    <p>AntiP2W (<strong>${BASE_URL}</strong>) is a community-run directory of non-pay-to-win Minecraft servers. We are not a commercial entity. Contact us via our <a href="https://dsc.gg/ap2w" target="_blank" rel="noopener noreferrer">Discord server</a>.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>2. What Data We Collect</h2>
+    <h3>When you log in with Discord</h3>
+    <p>We receive your <strong>Discord user ID</strong> and <strong>username</strong> from Discord's OAuth2 API. We store these to identify your submissions and admin status. We do not receive your email, password, or any other Discord data.</p>
+    <h3>When you submit a server</h3>
+    <p>We store your Discord ID and username alongside your server submission so admins can review it and so you can manage it later.</p>
+    <h3>Analytics</h3>
+    <p>We record anonymous page views for internal analytics. IP addresses are hashed (one-way, irreversible) using a secret key before storage — we cannot recover your original IP from our data. We do not use third-party analytics services (e.g. Google Analytics).</p>
+    <h3>Server logs</h3>
+    <p>Admin actions (approvals, rejections, edits) are logged for accountability. These logs include the acting admin's Discord ID.</p>
+    <h3>Cookies</h3>
+    <p>We set one session cookie to keep you logged in. It is <code>HttpOnly</code>, <code>SameSite=Lax</code>, and <code>Secure</code> in production. No tracking or advertising cookies are used.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>3. What We Do NOT Collect</h2>
+    <ul>
+      <li>Email addresses</li>
+      <li>Passwords</li>
+      <li>Payment information</li>
+      <li>Location data</li>
+      <li>Device fingerprints</li>
+      <li>Any data from third-party advertisers</li>
+    </ul>
+  </div>
+
+  <div class="legal-section">
+    <h2>4. How Your Data Is Used</h2>
+    <ul>
+      <li>To display and manage server listings you have submitted</li>
+      <li>To allow admins to review your submissions</li>
+      <li>To show you your own submission history</li>
+      <li>To enforce rate limits and prevent abuse</li>
+      <li>To send you in-site notifications about your submissions</li>
+    </ul>
+    <p>We do not sell, rent, or share your data with any third party.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>5. Data Retention</h2>
+    <p>Your data is retained for as long as your account is active. Approved server listings remain on the site indefinitely unless removed by you or an admin. If you delete your account, your personal identifiers are removed from all records — see Section 7.</p>
+  </div>
+
+  <div class="legal-section">
+    <h2>6. Third-Party Services</h2>
+    <ul>
+      <li><strong>Discord</strong> — used for authentication only. Discord's <a href="https://discord.com/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a> applies to your Discord account.</li>
+      <li><strong>Google Fonts</strong> — fonts are loaded from Google's CDN. Google may log your IP when serving fonts.</li>
+    </ul>
+  </div>
+
+  <div class="legal-section">
+    <h2>7. Your Rights — Account Deletion</h2>
+    <p>You can delete your account at any time. This will:</p>
+    <ul>
+      <li>Remove your Discord ID and username from all submission records</li>
+      <li>Remove your votes</li>
+      <li>Remove your notifications and analytics entries</li>
+      <li>Log you out immediately</li>
+    </ul>
+    <p>Approved server listings will remain on the site under a <strong>[deleted]</strong> account name, as they are part of the community directory. Pending submissions will be anonymised and may still be reviewed by admins.</p>
+    ${user ? `
+    <div class="delete-account-box">
+      <h3>⚠️ Delete Your Account</h3>
+      <p>This action is <strong>permanent and irreversible</strong>. Your personal data will be removed immediately.</p>
+      <form action="/servers/account/delete" method="POST" data-confirm="Are you absolutely sure? This will permanently delete all your personal data and cannot be undone.">
+      <input type="hidden" name="_csrf" value="${csrfToken}">
+        <button type="submit" class="btn btn-danger">🗑️ Permanently Delete My Data</button>
+      </form>
+    </div>` : `<p><a href="/auth/discord" class="btn btn-outline">Login to delete your account</a></p>`}
+  </div>
+
+  <div class="legal-section">
+    <h2>8. Contact</h2>
+    <p>For any privacy-related questions, contact us on <a href="https://dsc.gg/ap2w" target="_blank" rel="noopener noreferrer">Discord</a>.</p>
+  </div>
+</div>
+`;
+%>
+<%- include('layout', { body: bodyHtml, title: title, user: user, isAdmin: isAdmin }) %>
