@@ -26,7 +26,7 @@ jobs:
 
       - name: Trigger Webhook
         run: |
-          curl -X POST http://10.60.193.1:9000/hooks/deploy-prod \
+          curl -X POST http://192.168.35.103:9000/hooks/deploy-prod \
                -H "Content-Type: application/json" \
                -H "X-Token: $WEBHOOK_DEPLOYMENT" \
                --fail \
