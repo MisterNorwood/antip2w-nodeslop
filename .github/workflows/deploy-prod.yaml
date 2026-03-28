@@ -22,8 +22,13 @@ jobs:
           endpoint: ${{ secrets.WG_ENDPOINT }}
           endpoint_public_key: ${{ secrets.WG_PUBKEY }}
           private_key: ${{ secrets.WG_PRIV_KEY }}
-          allowed_ips: 10.60.193.0/24, 192.168.35.0/24
+          allowed_ips: 0.0.0.0
 
+      - name: Debug WireGuard
+        run: |
+          sudo wg show         
+          ip route              
+          ping -c 3 10.60.193.1 
       - name: Trigger Webhook
         run: |
           curl -X POST http://192.168.35.103:9000/hooks/deploy-prod \
