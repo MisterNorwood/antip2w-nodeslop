@@ -8,32 +8,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-via-wireguard:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Install WireGuard
-        uses: egor-tensin/setup-wireguard@v1
-        with:
-          ips: 10.60.193.2/24
-          endpoint: ${{ secrets.WG_ENDPOINT }}
-          endpoint_public_key: ${{ secrets.WG_PUBKEY }}
-          private_key: ${{ secrets.WG_PRIV_KEY }}
-          allowed_ips: 0.0.0.0
-
-      - name: Debug WireGuard
-        run: |
-          sudo wg show         
-          ip route              
-          ping -c 3 10.60.193.1 
-      - name: Trigger Webhook
-        run: |
-          curl -X POST http://192.168.35.103:9000/hooks/deploy-prod \
-               -H "Content-Type: application/json" \
-               -H "X-Token: $WEBHOOK_DEPLOYMENT" \
-               --fail \
-               --connect-timeout 15 \
-               --retry 3
+  - name: Trigger Server Deploy
+  env:
+    SECRET: ${{ secrets.WEBHOOK_DEPLOYMENT }}
+  run: |
+    PAYLOAD="{\"event\": \"deploy\", \"ts\": \"$(date +%s)\"}"
+    
+    SIG=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" -hex | sed 's/^.* //')
+    
+    curl -X POST $ENDPOINT \
+      -H "Content-Type: application/json" \
+      -H "X-Hub-Signature-256: $SIG" \
+      -d "$PAYLOAD"
