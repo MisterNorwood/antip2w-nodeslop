@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest 
     env:
       SECRET: ${{ secrets.WEBHOOK_DEPLOYMENT }}
-      ENDPOINT: ${{ secrets.WEBHOOK_ENDPOINT }} 
+      ENDPOINT: ${{ secrets.ENDPOINT }} 
     steps: 
       - name: Send Webhook
         run: |
