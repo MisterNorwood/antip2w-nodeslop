@@ -22,7 +22,7 @@ jobs:
           endpoint: ${{ secrets.WG_ENDPOINT }}
           endpoint_public_key: ${{ secrets.WG_PUBKEY }}
           private_key: ${{ secrets.WG_PRIV_KEY }}
-          allowed_ips: 10.60.193.0/24
+          allowed_ips: 10.60.193.0/24, 192.168.35.0/24
 
       - name: Trigger Webhook
         run: |
