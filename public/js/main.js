@@ -1,5 +1,47 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+  // ── CSRF: intercept all form submissions and send token as X-CSRF-Token header ──
+  // Custom headers require a CORS preflight which browsers block cross-origin,
+  // making the header the unforgeable proof of same-origin.
+  document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      // Check data-confirm before anything else
+      if (form.dataset.confirm && !confirm(form.dataset.confirm)) {
+        e.preventDefault();
+        return;
+      }
+
+      e.preventDefault();
+
+      const token = getCsrfToken();
+      if (!token) return; // no CSRF token on page — let native submit handle it
+
+      // Use URLSearchParams for urlencoded forms, FormData for multipart (file uploads)
+      const isMultipart = form.enctype === 'multipart/form-data';
+      const body = isMultipart
+        ? new FormData(form)
+        : new URLSearchParams(new FormData(form));
+
+      fetch(form.action || window.location.href, {
+        method: 'POST',
+        headers: isMultipart
+          ? { 'X-CSRF-Token': token }
+          : { 'X-CSRF-Token': token, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+        credentials: 'same-origin',
+      }).then(res => {
+        if (res.redirected) { window.location.href = res.url; return; }
+        return res.text().then(html => {
+          document.open(); document.write(html); document.close();
+          window.history.replaceState({}, '', res.url || window.location.href);
+        });
+      }).catch(() => {
+        // Network error — fall back to native submit
+        form.submit();
+      });
+    });
+  });
+
   // ── Auto-dismiss alerts ──────────────────────────────────────────────────
   document.querySelectorAll('.alert-success, .alert-info').forEach(el => {
     setTimeout(() => {
@@ -9,17 +51,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5000);
   });
 
-  // ── data-confirm: confirmation dialogs on non-form elements ──────────────
+  // ── data-confirm on non-form elements (buttons, links) ───────────────────
   document.querySelectorAll('[data-confirm]:not(form)').forEach(el => {
     el.addEventListener('click', e => {
       if (!confirm(el.dataset.confirm)) e.preventDefault();
-    });
-  });
-
-  // ── data-confirm on forms ────────────────────────────────────────────────
-  document.querySelectorAll('form[data-confirm]').forEach(form => {
-    form.addEventListener('submit', e => {
-      if (!confirm(form.dataset.confirm)) e.preventDefault();
     });
   });
 
@@ -69,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     guidelinesInput.addEventListener('input', () => updatePreview(guidelinesInput.value));
   }
 
-  // ── Tag input hint ──────────────────────────────────────────────────────
+  // ── Tag input hint ────────────────────────────────────────────────────────
   const tagInput = document.getElementById('tags');
   if (tagInput) {
     tagInput.addEventListener('input', () => {
@@ -80,7 +115,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
-// ── Banner preview ──────────────────────────────────────────────────────────
+// ── getCsrfToken: reads from meta tag set server-side ────────────────────────
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
+// ── Banner preview ────────────────────────────────────────────────────────────
 function previewBanner(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
@@ -94,16 +135,10 @@ function previewBanner(input) {
   }
 }
 
-// ── Guidelines preview ──────────────────────────────────────────────────────
+// ── Guidelines preview ────────────────────────────────────────────────────────
 function updatePreview(md) {
   const el = document.getElementById('guidelines-preview');
   const counter = document.getElementById('char-count');
   if (el && typeof marked !== 'undefined') el.innerHTML = marked.parse(md || '');
   if (counter) counter.textContent = (md || '').length + ' / 20000';
-}
-
-// ── Read CSRF token from meta tag (used by inline fetch calls) ───────────────
-function getCsrfToken() {
-  const meta = document.querySelector('meta[name="csrf-token"]');
-  return meta ? meta.getAttribute('content') : '';
 }
