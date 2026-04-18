@@ -236,40 +236,19 @@ app.get('/leaderboard', (req, res) => {
   res.render('leaderboard', { title: 'Leaderboard', topSubmitters, topRated, canonicalPath: '/leaderboard', metaDescription: 'AntiP2W leaderboard — top contributors by approved servers and community rating.' });
 });
 
+function normalizeBaseUrl(input) {
+  return input
+    .replace(':443', '')
+    .replace(/\/$/, '');
+}
+
 app.get('/robots.txt', (req, res) => {
-  let BASE_URL = process.env.BASE_URL || 'https://antip2w.duckdns.org';
-
-  // Normalize URL (remove default HTTPS port 443)
-  try {
-    const url = new URL(BASE_URL);
-
-    if (url.protocol === 'https:' && url.port === '443') {
-      url.port = ''; // removes :443
-    }
-
-    BASE_URL = url.toString().replace(/\/$/, ''); // remove trailing slash
-  } catch (e) {
-    // fallback if malformed
-    BASE_URL = BASE_URL.replace(':443', '').replace(/\/$/, '');
-  }
-
-  res.type('text/plain').send([
-    'User-agent: *',
-    'Allow: /',
-    'Allow: /servers',
-    'Allow: /servers/*',
-    'Disallow: /admin',
-    'Disallow: /auth',
-    'Disallow: /servers/submit',
-    'Disallow: /servers/requests',
-    'Disallow: /servers/my-servers',
-    '',
-    `Sitemap: ${BASE_URL}/sitemap.xml`
-  ].join('\n'));
+  const BASE_URL = normalizeBaseUrl(process.env.BASE_URL) || 'https://antip2w.duckdns.org';
+  res.type('text/plain').send(['User-agent: *','Allow: /','Allow: /servers','Allow: /servers/*','Disallow: /admin','Disallow: /auth','Disallow: /servers/submit','Disallow: /servers/requests','Disallow: /servers/my-servers','',`Sitemap: ${BASE_URL}/sitemap.xml`].join('\n'));
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  const BASE_URL = process.env.BASE_URL || 'https://antip2w.duckdns.org';
+  const BASE_URL = normalizeBaseUrl(process.env.BASE_URL) || 'https://antip2w.duckdns.org';
   const db = require('./models/db');
   const servers = db.prepare(`SELECT id, updated_at FROM servers WHERE status='approved' ORDER BY id`).all();
   const today = new Date().toISOString().split('T')[0];
