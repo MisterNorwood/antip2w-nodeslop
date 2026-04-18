@@ -237,8 +237,35 @@ app.get('/leaderboard', (req, res) => {
 });
 
 app.get('/robots.txt', (req, res) => {
-  const BASE_URL = process.env.BASE_URL || 'https://antip2w.duckdns.org';
-  res.type('text/plain').send(['User-agent: *','Allow: /','Allow: /servers','Allow: /servers/*','Disallow: /admin','Disallow: /auth','Disallow: /servers/submit','Disallow: /servers/requests','Disallow: /servers/my-servers','',`Sitemap: ${BASE_URL}/sitemap.xml`].join('\n'));
+  let BASE_URL = process.env.BASE_URL || 'https://antip2w.duckdns.org';
+
+  // Normalize URL (remove default HTTPS port 443)
+  try {
+    const url = new URL(BASE_URL);
+
+    if (url.protocol === 'https:' && url.port === '443') {
+      url.port = ''; // removes :443
+    }
+
+    BASE_URL = url.toString().replace(/\/$/, ''); // remove trailing slash
+  } catch (e) {
+    // fallback if malformed
+    BASE_URL = BASE_URL.replace(':443', '').replace(/\/$/, '');
+  }
+
+  res.type('text/plain').send([
+    'User-agent: *',
+    'Allow: /',
+    'Allow: /servers',
+    'Allow: /servers/*',
+    'Disallow: /admin',
+    'Disallow: /auth',
+    'Disallow: /servers/submit',
+    'Disallow: /servers/requests',
+    'Disallow: /servers/my-servers',
+    '',
+    `Sitemap: ${BASE_URL}/sitemap.xml`
+  ].join('\n'));
 });
 
 app.get('/sitemap.xml', (req, res) => {
